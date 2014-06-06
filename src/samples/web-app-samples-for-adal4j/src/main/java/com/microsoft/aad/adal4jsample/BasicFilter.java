@@ -54,6 +54,7 @@ public class BasicFilter implements Filter {
     private String clientSecret = "";
     private String tenant = "";
     private String authority;
+    private String apiVersion ="api-version=2013-11-08";
 
     public void destroy() {
 
@@ -241,6 +242,7 @@ public class BasicFilter implements Filter {
         authority = config.getServletContext().getInitParameter("authority");
         tenant = config.getServletContext().getInitParameter("tenant");
         clientSecret = config.getInitParameter("secret_key");
+        apiVersion = config.getInitParameter("apiVersion");
     }
 
 }

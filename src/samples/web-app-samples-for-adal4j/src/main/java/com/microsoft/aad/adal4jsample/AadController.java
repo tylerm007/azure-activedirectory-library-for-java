@@ -77,7 +77,9 @@ public class AadController {
         users = JSONHelper.fetchDirectoryObjectJSONArray(response);
 
         StringBuilder builder = new StringBuilder();
-        User user = null;
+        User user = new User();
+        user.setUserPrincipalName(userPrincipalName);
+        builder.append(user.getUserPrincipalName() + "<br/>");
         for (int i = 0; i < users.length(); i++) {
             JSONObject thisUserJSONObject = users.optJSONObject(i);
             user = new User();

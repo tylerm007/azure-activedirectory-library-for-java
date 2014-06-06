@@ -2,6 +2,7 @@ package com.microsoft.aad.adal4jsample;
 
 import java.security.acl.Group;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -44,6 +45,7 @@ public class User extends DirectoryObject{
 	protected String userPrincipalName;
 	protected boolean isDeleted;  // this will move to dto
 
+
 	/**
 	 * below 4 properties are for future use
 	 */
@@ -54,7 +56,7 @@ public class User extends DirectoryObject{
 	private ArrayList<User> directReports;
 	
 	// The groups holds a list of group entity this user belongs to. 
-	private ArrayList<Group> groups;
+	private ArrayList<GroupInfo> groups;
 	
 	// The roles holds a list of role entity this user belongs to. 
 	private ArrayList<Group> roles;
@@ -65,7 +67,7 @@ public class User extends DirectoryObject{
 	 */
 	public User(){
 		directReports = null;
-		groups = new ArrayList<Group>();
+		groups = new ArrayList<GroupInfo>();
 		roles = new ArrayList<Group>();
 		managerDisplayname = null;
 	}
@@ -470,6 +472,43 @@ public class User extends DirectoryObject{
 	public void setManagerDisplayname(String managerDisplayname){
 		this.managerDisplayname = managerDisplayname;
 	}
+	/**
+	 * @param dName DisplayName of the Group to be added.
+	 * @param oId   ObjectId of the Group to be added.
+	 */
+	public void addNewGroup(String dName, String oId){
+		this.groups.add( new GroupInfo( dName, oId ) );
+	}
+	
+
+	/**
+	 * @param index The index of the Group Entry.
+	 * @return The ObjectId of the Group entry at index.
+	 */
+	
+	public String getGroupObjectId(int index){
+		return this.groups.get(index).getObjectId();
+	}
+
+
+	/**
+	 * @param index The index of the Group Entry.
+	 * @return The DisplayName of the Group entry at index.
+	 */
+	
+	public String getGroupDisplayName(int index){
+		return this.groups.get(index).getDisplayName();
+	}
+	
+
+	/**
+	 * @return the number of group entries.
+	 */
+	
+	public int getGroupNumber(){
+		return this.groups.size();
+	}	
+	
 }
 
 

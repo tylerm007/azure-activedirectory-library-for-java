@@ -24,6 +24,10 @@
 			<param-name>secret_key</param-name>
 			<param-value>YOUR_CLIENT_SECRET</param-value>
 		</init-param>
+		<init-param>
+			<param-name>apiVersion</param-name>
+			<param-value>api-version=2013-11-08</param-value>
+		</init-param>
 	</filter>
 	<filter-mapping>
 		<filter-name>BasicFilter</filter-name>
