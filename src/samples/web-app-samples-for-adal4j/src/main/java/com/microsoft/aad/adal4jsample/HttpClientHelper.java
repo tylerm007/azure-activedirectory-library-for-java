@@ -45,10 +45,15 @@ public class HttpClientHelper {
     public static String getResponseStringFromConn(HttpURLConnection conn, boolean isSuccess) throws IOException {
 
         BufferedReader reader = null;
-        if (isSuccess) {
-            reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        } else {
-            reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+        try{
+	        if (isSuccess) {
+	            reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+	        } else {
+	            reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+	        }
+        } catch(Exception ex){
+        	ex.printStackTrace();
+        	//throw ex;
         }
         StringBuffer stringBuffer = new StringBuffer();
         String line = "";

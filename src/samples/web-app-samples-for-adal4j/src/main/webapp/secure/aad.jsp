@@ -20,5 +20,8 @@
 	<ul>
 		<li><a href="<%=request.getContextPath()%>/index.jsp">Go Home</a></li>
 	</ul>
+	<h2> Groups </h2>
+	<p>${group}</p>
+	
 </body>
 </html>

@@ -19,13 +19,16 @@
  ******************************************************************************/
 package com.microsoft.aad.adal4jsample;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -38,55 +41,117 @@ import com.microsoft.aad.adal4j.AuthenticationResult;
 @RequestMapping("/secure/aad")
 public class AadController {
 
-    @RequestMapping(method = RequestMethod.GET)
-    public String getDirectoryObjects(ModelMap model, HttpServletRequest httpRequest) {
-        HttpSession session = httpRequest.getSession();
-        AuthenticationResult result = (AuthenticationResult) session.getAttribute(AuthHelper.PRINCIPAL_SESSION_NAME);
-        if (result == null) {
-            model.addAttribute("error", new Exception("AuthenticationResult not found in session."));
-            return "/error";
-        } else {
-            String data;
-            try {
-                data = this.getUsernamesFromGraph(result.getAccessToken(), session.getServletContext()
-                        .getInitParameter("tenant"));
-                model.addAttribute("users", data);
-            } catch (Exception e) {
-                model.addAttribute("error", e);
-                return "/error";
-            }
-        }
-        return "/secure/aad";
-    }
+	@RequestMapping(method = RequestMethod.GET)
+	public String getDirectoryObjects(ModelMap model, HttpServletRequest httpRequest) {
+		HttpSession session = httpRequest.getSession();
+		AuthenticationResult result = (AuthenticationResult) session.getAttribute(AuthHelper.PRINCIPAL_SESSION_NAME);
+		if (result == null) {
+			model.addAttribute("error", new Exception("AuthenticationResult not found in session."));
+			return "/error";
+		} else {
+			String data, group;
+			try {
+				// this is sample code and returns ALL users for this Tennant.
+				String accessToken = result.getAccessToken();
+				String tenant = session.getServletContext().getInitParameter("tenant");
+				data = this.getUsernamesFromGraph(accessToken, tenant);
+				model.addAttribute("users", data);
+				group = this.getGroupsFromGraph(accessToken, tenant);
+				model.addAttribute("group", group);
+			} catch (Exception e) {
+				e.printStackTrace();
+				model.addAttribute("error", e);
+				return "/error";
+			}
+		}
+		return "/secure/aad";
+	}
 
-    private String getUsernamesFromGraph(String accessToken, String tenant) throws Exception {
-        URL url = new URL(String.format("https://graph.windows.net/%s/users?api-version=2013-04-05", tenant,
-                accessToken));
+	private String getGroupsFromGraph(final String accessToken, final String tenant) throws Exception,
+			MalformedURLException {
+		URL url = new URL(String.format("https://graph.windows.net/%s/groups?api-version=2013-11-08", tenant));
 
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        // Set the appropriate header fields in the request header.
-        conn.setRequestProperty("api-version", "2013-04-05");
-        conn.setRequestProperty("Authorization", accessToken);
-        conn.setRequestProperty("Accept", "application/json;odata=minimalmetadata");
-        String goodRespStr = HttpClientHelper.getResponseStringFromConn(conn, true);
-        // logger.info("goodRespStr ->" + goodRespStr);
-        int responseCode = conn.getResponseCode();
-        JSONObject response = HttpClientHelper.processGoodRespStr(responseCode, goodRespStr);
-        JSONArray users = new JSONArray();
+		JSONObject response = getResponseFromRUL(accessToken, url);
+		return createGroupResponse(response);
+	}
 
-        users = JSONHelper.fetchDirectoryObjectJSONArray(response);
+	private String getGroupFromGraph(final String accessToken, final String tenant, final String userUPN) throws Exception,
+			MalformedURLException {
+		URL url = new URL(String.format("https://graph.windows.net/%s/users/%s/memberOf?api-version=2013-11-08", tenant,
+				userUPN));
 
-        StringBuilder builder = new StringBuilder();
-        User user = new User();
-        user.setUserPrincipalName(userPrincipalName);
-        builder.append(user.getUserPrincipalName() + "<br/>");
-        for (int i = 0; i < users.length(); i++) {
-            JSONObject thisUserJSONObject = users.optJSONObject(i);
-            user = new User();
-            JSONHelper.convertJSONObjectToDirectoryObject(thisUserJSONObject, user);
-            builder.append(user.getUserPrincipalName() + "<br/>");
-        }
-        return builder.toString();
-    }
+		JSONObject response = getResponseFromRUL(accessToken, url);
+		return createGroupResponse(response);
+	}
+
+	private JSONObject getResponseFromRUL(final String accessToken, URL url) throws IOException, JSONException {
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+		conn.setRequestProperty("Authorization", accessToken);
+		conn.setRequestProperty("Accept", "application/json;odata=minimalmetadata");
+
+		int responseCode = conn.getResponseCode();
+		String goodRespStr = HttpClientHelper.getResponseStringFromConn(conn, responseCode < 399);
+
+		JSONObject response = HttpClientHelper.processGoodRespStr(responseCode, goodRespStr);
+		return response;
+	}
+
+	private String createGroupResponse(JSONObject response) throws Exception {
+		JSONArray groups = new JSONArray();
+		Group group;
+		StringBuilder builder = new StringBuilder();
+		builder.append("GROUPS <br/>");
+		groups = JSONHelper.fetchDirectoryObjectJSONArray(response);
+		if (groups != null) {
+			for (int i = 0; i < groups.length(); i++) {
+				JSONObject thisUserJSONObject = groups.optJSONObject(i);
+				group = new Group();
+				JSONHelper.convertJSONObjectToDirectoryObject(thisUserJSONObject, group);
+				builder.append(group.getDisplayName() + "<br/>");
+			}
+		}
+		return builder.toString();
+	}
+
+	private String getUsernamesFromGraph(String accessToken, String tenant) throws Exception {
+		URL url = new URL(String.format("https://graph.windows.net/%s/users?api-version=2013-11-08", tenant));
+		JSONObject response = getResponseFromRUL(accessToken, url);
+		return createUserResponse(accessToken, tenant,response);
+	}
+
+	private String getUserFromGraph(String accessToken, String tenant, String userUPN) throws Exception {
+		URL url = new URL(String.format("https://graph.windows.net/%s/users/%s?api-version=2013-11-08", tenant, userUPN));
+		JSONObject response = getResponseFromRUL(accessToken, url);
+		return createUserResponse(accessToken, tenant, response);
+	}
+
+	private String createUserResponse(String accessToken, String tenant,JSONObject response) throws Exception {
+		JSONArray users = new JSONArray();
+
+		users = JSONHelper.fetchDirectoryObjectJSONArray(response);
+
+		StringBuilder builder = new StringBuilder();
+		User user = new User();
+		builder.append("USERS <br/>");
+		// user.setUserPrincipalName(userPrincipalName);
+		// builder.append(user.getUserPrincipalName() + "<br/>");
+		if (users != null) {
+			for (int i = 0; i < users.length(); i++) {
+				JSONObject thisUserJSONObject = users.optJSONObject(i);
+				user = new User();
+				JSONHelper.convertJSONObjectToDirectoryObject(thisUserJSONObject, user);
+				builder.append(user.getUserPrincipalName());
+				builder.append("(" + user.getObjectId() + ")");
+				builder.append("<br/>");
+				
+				String userUPN = user.getObjectId();
+				String group = this.getGroupFromGraph(accessToken, tenant, userUPN);
+				builder.append(group);
+			
+			}
+		}
+		return builder.toString();
+	}
 
 }
